@@ -1,0 +1,5 @@
+# Copy to terraform.tfvars (gitignored) and fill in your values.
+aws_region                = "il-central-1"
+aws_profile               = "default"
+project_name              = "elisra"
+agent_ssh_public_key_path = "~/.ssh/elisra-jenkins-agent.pub"

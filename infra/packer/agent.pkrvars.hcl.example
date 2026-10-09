@@ -1,0 +1,4 @@
+# Copy to agent.pkrvars.hcl (gitignored) and fill in.
+aws_region  = "eu-north-1"
+aws_profile = "default"
+subnet_id   = "subnet-xxxxxxxx"
