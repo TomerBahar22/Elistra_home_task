@@ -5,7 +5,7 @@ app = Flask(__name__)
 
 PAGE = """
 <h2>Running containers</h2>
-<p> IP: {{ client_ip }}</p>
+<p> IPS: {{ client_ip }}</p>
 <table border="1" cellpadding="5">
   <tr><th>Name</th><th>ID</th><th>Image</th><th>Status</th></tr>
   {% for c in containers %}

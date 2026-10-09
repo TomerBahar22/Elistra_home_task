@@ -9,7 +9,7 @@ services:
     networks: [backend]
 
   flask-app:
-    image: tomerbahar2/flask-containers:${FLASK_TAG:-latest}
+    image: tomerbahar2/flask-containers:${FLASK_TAG:?FLASK_TAG is required}
     environment:
       DOCKER_HOST: tcp://socket-proxy:2375
     depends_on: [socket-proxy]
@@ -20,7 +20,7 @@ services:
     networks: [backend, frontend]
 
   nginx-proxy:
-    image: tomerbahar2/nginx-proxy:${NGINX_TAG:-latest}
+    image: tomerbahar2/nginx-proxy:${NGINX_TAG:?NGINX_TAG is required}
     ports:
       - "127.0.0.1:8080:80"
     depends_on:

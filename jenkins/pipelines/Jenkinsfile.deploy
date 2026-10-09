@@ -2,15 +2,13 @@ pipeline {
     agent { label 'docker' }
 
     parameters {
-        string(name: 'FLASK_TAG', defaultValue: 'latest', description: 'Flask image tag to deploy')
-        string(name: 'NGINX_TAG', defaultValue: 'latest', description: 'Nginx image tag to deploy')
+        string(name: 'FLASK_TAG', defaultValue: '', description: 'Flask image version. Empty = jenkins/flask-app/VERSION')
+        string(name: 'NGINX_TAG', defaultValue: '', description: 'Nginx image version. Empty = jenkins/nginx-proxy/VERSION')
     }
 
     environment {
         COMPOSE_FILE         = 'jenkins/deploy/docker-compose.yml'
         COMPOSE_PROJECT_NAME = 'containers-demo'
-        FLASK_TAG            = "${params.FLASK_TAG}"
-        NGINX_TAG            = "${params.NGINX_TAG}"
     }
 
     options {
@@ -20,6 +18,17 @@ pipeline {
     }
 
     stages {
+        stage('Resolve versions') {
+            steps {
+                script {
+                    env.FLASK_TAG = params.FLASK_TAG?.trim() ?: readFile('jenkins/flask-app/VERSION').trim()
+                    env.NGINX_TAG = params.NGINX_TAG?.trim() ?: readFile('jenkins/nginx-proxy/VERSION').trim()
+                    currentBuild.displayName = "#${env.BUILD_NUMBER} flask ${env.FLASK_TAG} / nginx ${env.NGINX_TAG}"
+                }
+                echo "Deploying flask-containers:${env.FLASK_TAG} and nginx-proxy:${env.NGINX_TAG}"
+            }
+        }
+
         stage('Pull images') {
             steps {
                 sh 'docker compose pull'
@@ -38,14 +47,10 @@ pipeline {
                     # Nginx published on localhost only
                     docker compose port nginx-proxy 80 | grep -q '^127.0.0.1:8080$'
 
-                    # Wait until the app answers through Nginx
-                    for i in $(seq 1 10); do
-                        curl -fsS http://127.0.0.1:8080/health && break
-                        sleep 3
-                    done
-                    curl -fsS http://127.0.0.1:8080/health
+                    # The app answers through Nginx (retries while starting)
+                    curl -fsS --retry 10 --retry-delay 3 --retry-all-errors http://127.0.0.1:8080/health
 
-                    # The app sees the running containers via the socket proxy
+                    # The app lists the running containers via the socket proxy
                     curl -fsS http://127.0.0.1:8080/api/containers | tee containers.json
                     grep -q flask-app containers.json
                     grep -q nginx-proxy containers.json
@@ -58,8 +63,9 @@ pipeline {
         failure {
             sh 'docker compose logs --no-color || true'
         }
-        always {
+        cleanup {
             sh 'docker compose down --remove-orphans || true'
+            deleteDir()
         }
     }
 }
