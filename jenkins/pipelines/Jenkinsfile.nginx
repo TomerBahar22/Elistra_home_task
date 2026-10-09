@@ -3,6 +3,8 @@ pipeline {
 
     environment {
         TRIVY_IMAGE = 'aquasec/trivy:latest'
+        IMAGE       = 'tomerbahar2/nginx-proxy'
+        APP_DIR     = 'jenkins/nginx-proxy'
     }
 
     options {
