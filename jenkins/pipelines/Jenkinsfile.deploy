@@ -1,0 +1,65 @@
+pipeline {
+    agent { label 'docker' }
+
+    parameters {
+        string(name: 'FLASK_TAG', defaultValue: 'latest', description: 'Flask image tag to deploy')
+        string(name: 'NGINX_TAG', defaultValue: 'latest', description: 'Nginx image tag to deploy')
+    }
+
+    environment {
+        COMPOSE_FILE         = 'jenkins/deploy/docker-compose.yml'
+        COMPOSE_PROJECT_NAME = 'containers-demo'
+        FLASK_TAG            = "${params.FLASK_TAG}"
+        NGINX_TAG            = "${params.NGINX_TAG}"
+    }
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    stages {
+        stage('Pull images') {
+            steps {
+                sh 'docker compose pull'
+            }
+        }
+
+        stage('Run containers') {
+            steps {
+                sh 'docker compose up -d --wait'
+            }
+        }
+
+        stage('Verify') {
+            steps {
+                sh '''
+                    # Nginx published on localhost only
+                    docker compose port nginx-proxy 80 | grep -q '^127.0.0.1:8080$'
+
+                    # Wait until the app answers through Nginx
+                    for i in $(seq 1 10); do
+                        curl -fsS http://127.0.0.1:8080/health && break
+                        sleep 3
+                    done
+                    curl -fsS http://127.0.0.1:8080/health
+
+                    # The app sees the running containers via the socket proxy
+                    curl -fsS http://127.0.0.1:8080/api/containers | tee containers.json
+                    grep -q flask-app containers.json
+                    grep -q nginx-proxy containers.json
+                '''
+            }
+        }
+    }
+
+    post {
+        failure {
+            sh 'docker compose logs --no-color || true'
+        }
+        always {
+            sh 'docker compose down --remove-orphans || true'
+        }
+    }
+}
