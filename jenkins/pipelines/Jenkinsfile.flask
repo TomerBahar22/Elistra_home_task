@@ -2,8 +2,9 @@ pipeline {
     agent { label 'docker' }
 
     environment {
-        IMAGE = 'tomerbahar2/flask-containers'
-        TAG   = "${env.BUILD_NUMBER}"
+        IMAGE       = 'tomerbahar2/flask-containers'
+        APP_DIR     = 'jenkins/flask-app'
+        TRIVY_IMAGE = 'aquasec/trivy:latest'
     }
 
     options {
@@ -12,11 +13,42 @@ pipeline {
     }
 
     stages {
+        stage('Read version') {
+            steps {
+                script {
+                    env.VERSION = readFile("${APP_DIR}/VERSION").trim()
+                    currentBuild.displayName = "#${env.BUILD_NUMBER} v${env.VERSION}"
+                }
+                sh '''
+                    echo "$VERSION" | grep -Eq '^[0-9]+[.][0-9]+[.][0-9]+$' \
+                        || { echo "VERSION must look like 1.2.3, got: $VERSION"; exit 1; }
+
+                    if docker manifest inspect $IMAGE:$VERSION > /dev/null 2>&1; then
+                        echo "$IMAGE:$VERSION already exists. Bump $APP_DIR/VERSION."
+                        exit 1
+                    fi
+                '''
+            }
+        }
+
         stage('Build image') {
             steps {
-                dir('jenkins/flask-app') {
-                    sh 'docker build -t $IMAGE:$TAG -t $IMAGE:latest .'
+                dir("${APP_DIR}") {
+                    sh 'docker build -t $IMAGE:$VERSION -t $IMAGE:latest .'
                 }
+            }
+        }
+
+        stage('Security scan') {
+            steps {
+                sh '''
+                    docker save $IMAGE:$VERSION -o image.tar
+                    docker run --rm \
+                        -v "$PWD/image.tar:/image.tar:ro" \
+                        -v trivy-cache:/root/.cache/ \
+                        $TRIVY_IMAGE image --input /image.tar \
+                        --severity CRITICAL --ignore-unfixed --exit-code 1 --no-progress
+                '''
             }
         }
 
@@ -27,7 +59,7 @@ pipeline {
                                                   passwordVariable: 'DH_TOKEN')]) {
                     sh '''
                         echo "$DH_TOKEN" | docker login -u "$DH_USER" --password-stdin
-                        docker push $IMAGE:$TAG
+                        docker push $IMAGE:$VERSION
                         docker push $IMAGE:latest
                     '''
                 }
@@ -38,6 +70,10 @@ pipeline {
     post {
         always {
             sh 'docker logout || true'
+        }
+        cleanup {
+            sh 'docker image rm $IMAGE:$VERSION $IMAGE:latest || true'
+            deleteDir()
         }
     }
 }
