@@ -1,0 +1,54 @@
+# ── Terraform ─────────────────────────────────────────
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+terraform.tfvars
+*.auto.tfvars
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+# keep: .terraform.lock.hcl, *.tfvars.example
+
+# ── Packer ────────────────────────────────────────────
+*.pkrvars.hcl
+!*.pkrvars.hcl.example
+manifest.json
+packer_cache/
+
+# ── Python ────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ── Secrets / local config ────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+kubeconfig
+*.kubeconfig
+load-test.yaml
+# ── Docker / build output ─────────────────────────────
+*.tar
+image.tar
+
+# ── Editors / OS ──────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db

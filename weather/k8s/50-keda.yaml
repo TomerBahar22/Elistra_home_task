@@ -1,0 +1,36 @@
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: rabbitmq-auth
+  namespace: weather
+spec:
+  secretTargetRef:
+    - parameter: host # the hostname of the RabbitMQ server
+      name: rabbitmq-default-user
+      key: connection_string
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: weather-worker
+  namespace: weather
+spec:
+  scaleTargetRef:
+    name: weather-worker # the name of the Deployment to scale
+  minReplicaCount: 1 # one worker always ready (users wait for replies)
+  maxReplicaCount: 10
+  pollingInterval: 5 # check the queue every 5 seconds
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 30 # default is 5 minutes
+  triggers:
+    - type: rabbitmq
+      metadata:
+        protocol: amqp
+        queueName: weather-requests
+        mode: QueueLength
+        value: "5" # scale up if there are more than 5 messages in the queue
+      authenticationRef:
+        name: rabbitmq-auth

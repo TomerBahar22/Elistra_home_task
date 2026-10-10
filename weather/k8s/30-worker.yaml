@@ -4,7 +4,6 @@ metadata:
   name: weather-worker
   namespace: weather
 spec:
-  replicas: 1                    # KEDA takes over this number in the next step
   selector:
     matchLabels: { app: weather-worker }
   template:
@@ -28,7 +27,7 @@ spec:
             - name: API_WEATHER
               valueFrom: { secretKeyRef: { name: weather-api, key: API_WEATHER } }
             - name: WORK_DELAY
-              value: "2"                     # makes the queue build up visibly in the demo
+              value: "2"               
           resources:
             requests: { cpu: 50m, memory: 128Mi }
             limits:   { memory: 256Mi }
