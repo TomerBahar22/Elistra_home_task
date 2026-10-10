@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: weather-web
+  namespace: weather
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing #public subnet
+    alb.ingress.kubernetes.io/target-type: ip #send traffic to the pod IPs directly
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]' #listen on both ports
+    alb.ingress.kubernetes.io/ssl-redirect: "443" #redirect HTTP to HTTPS
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:eu-north-1:596451157577:certificate/000a048a-c220-4044-990e-cc37777c4b6c # acm certificate arn for the domain
+    alb.ingress.kubernetes.io/healthcheck-path: /health # send traffic only to healthy pods
+spec:
+  ingressClassName: alb
+  rules:
+    - host: weather.tomerbahar.click
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: weather-web
+                port:
+                  number: 80
