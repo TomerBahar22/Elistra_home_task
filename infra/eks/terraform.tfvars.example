@@ -1,0 +1,5 @@
+domain_name        = "example.com"   # required: your Route 53 hosted zone
+aws_region         = "eu-north-1"
+aws_profile        = "default"
+cluster_name       = "elisra-eks"
+node_capacity_type = "SPOT"

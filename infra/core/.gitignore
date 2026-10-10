@@ -12,4 +12,4 @@ tfplan
 # Provider plugins / modules cache
 .terraform/
 
-# Keep the lock file committed: .terraform.lock.hcl
+
