@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: weather-worker
+  namespace: weather
+spec:
+  replicas: 1                    # KEDA takes over this number in the next step
+  selector:
+    matchLabels: { app: weather-worker }
+  template:
+    metadata:
+      labels: { app: weather-worker }
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: worker
+          image: tomerbahar2/weather-queue:1.0.0
+          command: ["python", "worker.py"]   # same image, worker role
+          env:
+            - name: RABBITMQ_HOST
+              valueFrom: { secretKeyRef: { name: rabbitmq-default-user, key: host } }
+            - name: RABBITMQ_PORT
+              valueFrom: { secretKeyRef: { name: rabbitmq-default-user, key: port } }
+            - name: RABBITMQ_USER
+              valueFrom: { secretKeyRef: { name: rabbitmq-default-user, key: username } }
+            - name: RABBITMQ_PASSWORD
+              valueFrom: { secretKeyRef: { name: rabbitmq-default-user, key: password } }
+            - name: API_WEATHER
+              valueFrom: { secretKeyRef: { name: weather-api, key: API_WEATHER } }
+            - name: WORK_DELAY
+              value: "2"                     # makes the queue build up visibly in the demo
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits:   { memory: 256Mi }

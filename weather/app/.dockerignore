@@ -1,0 +1,11 @@
+.venv
+.idea
+.myfuncs
+.env
+__pycache__
+.gitignore
+ssl/
+.dockerignore
+.git
+bringup.sh
+teardown.sh

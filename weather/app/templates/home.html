@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Weather App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(160deg, #dbeafe 0%, #f0f4f8 60%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 48px 20px;
+            color: #1e293b;
+        }
+
+        .page-header {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            margin: 0 0 6px;
+        }
+
+        .page-subtitle {
+            text-align: center;
+            color: #64748b;
+            margin: 0 0 32px;
+            font-size: 0.95rem;
+        }
+
+        .search-form-container {
+            max-width: 520px;
+            margin: 0 auto 24px;
+            padding: 24px;
+            background: #f7f8fa;
+            border-radius: 14px;
+            box-shadow: 0 4px 20px rgba(30, 41, 59, 0.08);
+        }
+
+        .search-form {
+            display: flex;
+            gap: 10px;
+        }
+
+        .autocomplete-wrap {
+            position: relative;
+            flex-grow: 1;
+        }
+
+        .search-form-input {
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 12px 14px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+            background: #fdfdfd;
+        }
+
+        .search-form-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        .suggest-box {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            background: #f7f8fa;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            max-height: 280px;
+            overflow-y: auto;
+            z-index: 10;
+            display: none;
+            box-shadow: 0 8px 24px rgba(30, 41, 59, 0.12);
+        }
+
+        .suggest-item {
+            padding: 11px 14px;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+
+        .suggest-item:hover {
+            background: #e3edfb;
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0,0,0,0);
+            border: 0;
+        }
+
+        .search-form-button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 22px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .search-form-button:hover {
+            background: #2563eb;
+        }
+
+        .error-message {
+            max-width: 520px;
+            margin: 0 auto 20px;
+            padding: 12px 16px;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            color: #b91c1c;
+            text-align: center;
+            font-size: 0.95rem;
+        }
+
+        .results-panel {
+            max-width: 720px;
+            margin: 36px auto 0;
+        }
+
+        .location-name {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin: 0 0 16px;
+        }
+
+        .forecast-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #f7f8fa;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(30, 41, 59, 0.08);
+        }
+
+        .forecast-table th, .forecast-table td {
+            padding: 13px 16px;
+            text-align: left;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .forecast-table th {
+            background: #eef1f5;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: #64748b;
+        }
+
+        .forecast-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .forecast-table tbody tr:hover {
+            background: #eef1f5;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="page-header">Weather Forecast</h1>
+    <p class="page-subtitle">7-day forecast for any city or country</p>
+
+    <div class="search-form-container">
+        <form class="search-form" action="/" method="post">
+            <div class="autocomplete-wrap">
+                <label for="city-input" class="sr-only">City</label>
+                <input class="search-form-input" type="search" id="city-input" name="city"
+                       placeholder="Search for a city..." autocomplete="off">
+                <div id="suggest-box" class="suggest-box"></div>
+            </div>
+
+            <input type="hidden" id="lat-input" name="lat">
+            <input type="hidden" id="lon-input" name="lon">
+
+            <button class="search-form-button" type="submit">Search</button>
+        </form>
+    </div>
+
+    {% if error %}
+        <p class="error-message">{{ error }}</p>
+    {% endif %}
+
+    {% if weather %}
+    <div class="results-panel">
+        <h2 class="location-name">{{ weather['display_name'] }}</h2>
+
+        <table class="forecast-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Day</th>
+                    <th>Night</th>
+                    <th>Average</th>
+                    <th>Humidity</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for date, data in weather["days"].items() %}
+                <tr>
+                    <td>{{ date }}</td>
+                    <td>{{ data['day_temperature'] }}&deg;C</td>
+                    <td>{{ data['night_temperature'] }}&deg;C</td>
+                    <td>{{ data['average_temperature'] }}&deg;C</td>
+                    <td>{{ data['average_humidity'] }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <script>
+        const cityInput = document.getElementById('city-input');
+        const latInput = document.getElementById('lat-input');
+        const lonInput = document.getElementById('lon-input');
+        const suggestBox = document.getElementById('suggest-box');
+        let debounceTimer = null;
+
+        cityInput.addEventListener('input', () => {
+            latInput.value = '';
+            lonInput.value = '';
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(fetchSuggestions, 200);
+        });
+
+        async function fetchSuggestions() {
+            const q = cityInput.value.trim();
+            if (q.length < 2) { hideBox(); return; }
+            try {
+                const resp = await fetch(`/api/suggest?q=${encodeURIComponent(q)}`);
+                const data = await resp.json();
+                renderSuggestions(data.results);
+            } catch {
+                hideBox();
+            }
+        }
+
+        function renderSuggestions(results) {
+            if (!results.length) { hideBox(); return; }
+            suggestBox.innerHTML = '';
+            for (const r of results) {
+                const div = document.createElement('div');
+                div.className = 'suggest-item';
+                div.textContent = r.label;
+                div.addEventListener('click', () => {
+                    cityInput.value = r.label;
+                    latInput.value = r.lat;
+                    lonInput.value = r.lon;
+                    hideBox();
+                });
+                suggestBox.appendChild(div);
+            }
+            suggestBox.style.display = 'block';
+        }
+
+        function hideBox() {
+            suggestBox.style.display = 'none';
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.autocomplete-wrap')) hideBox();
+        });
+    </script>
+</body>
+</html>
