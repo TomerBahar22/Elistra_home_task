@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: weather-web
+  namespace: weather
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: weather-web }
+  template:
+    metadata:
+      labels: { app: weather-web }
+    spec:
+      containers:
+        - name: web
+          image: tomerbahar2/weather-queue:1.0.0
+          ports:
+            - containerPort: 8080
+          env:
+            - name: RABBITMQ_HOST
+              valueFrom: { secretKeyRef: { name: rabbitmq-default-user, key: host } }
+            - name: RABBITMQ_PORT
+              valueFrom: { secretKeyRef: { name: rabbitmq-default-user, key: port } }
+            - name: RABBITMQ_USER
+              valueFrom: { secretKeyRef: { name: rabbitmq-default-user, key: username } }
+            - name: RABBITMQ_PASSWORD
+              valueFrom: { secretKeyRef: { name: rabbitmq-default-user, key: password } }
+          readinessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits:   { memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: weather-web
+  namespace: weather
+spec:
+  selector: { app: weather-web }
+  ports:
+    - port: 80
+      targetPort: 8080
