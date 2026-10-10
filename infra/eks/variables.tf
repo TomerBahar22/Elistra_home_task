@@ -62,3 +62,9 @@ variable "keda_chart_version" {
   type        = string
   default     = "2.21.0"
 }
+
+variable "cert_manager_chart_version" {
+  description = "cert-manager Helm chart version"
+  type        = string
+  default     = "1.21.2"
+}

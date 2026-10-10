@@ -45,6 +45,25 @@ resource "helm_release" "external_dns" {
   depends_on = [module.external_dns_pod_identity]
 }
 
+# Issues TLS certificates inside the cluster. Required by the RabbitMQ
+resource "helm_release" "cert_manager" {
+  name             = "cert-manager"
+  repository       = "https://charts.jetstack.io"
+  chart            = "cert-manager"
+  version          = var.cert_manager_chart_version
+  namespace        = "cert-manager"
+  create_namespace = true
+
+  values = [yamlencode({
+    crds = {
+      enabled = true # install the Certificate / Issuer CRDs with the chart
+      keep    = true # don't delete CRDs (and every certificate) on uninstall
+    }
+  })]
+
+  depends_on = [module.eks]
+}
+
 # KEDA: Kubernetes Event-Driven Autoscaling, for scaling workloads based on external events (e.g. RabbitMQ queue length).
 resource "helm_release" "keda" {
   name             = "keda"
